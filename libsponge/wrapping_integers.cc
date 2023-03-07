@@ -1,5 +1,6 @@
 #include "wrapping_integers.hh"
 
+#include <iostream>
 #include <math.h>
 
 // Dummy implementation of a 32-bit wrapping integer
@@ -16,8 +17,8 @@ using namespace std;
 //! \param n The input absolute 64-bit sequence number
 //! \param isn The initial sequence number
 WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
-    //    DUMMY_CODE(n, isn);
-    uint64_t mod = pow(2, 32) - 1;
+    DUMMY_CODE(n, isn);
+    uint64_t mod = 1ll << 32;
     ::uint32_t seq_no = (n + static_cast<::uint64_t>(isn.raw_value())) % mod;
     return WrappingInt32{seq_no};
 }
@@ -33,7 +34,39 @@ WrappingInt32 wrap(uint64_t n, WrappingInt32 isn) {
 //! and the other stream runs from the remote TCPSender to the local TCPReceiver and
 //! has a different ISN.
 uint64_t unwrap(WrappingInt32 n, WrappingInt32 isn, uint64_t checkpoint) {
-    //    DUMMY_CODE(n, isn, checkpoint);
+    DUMMY_CODE(n, isn, checkpoint);
+    ::uint64_t abs_no = n - isn;
+    ::int32_t raw_abs = n - isn;
+    ::uint64_t mod = 1ll << 32;
 
-    return n - isn - checkpoint;
+    if (raw_abs < 0) {
+        abs_no = raw_abs + mod;
+    }
+
+    ::uint32_t times = checkpoint / mod;
+    ::uint64_t same_round_abs_no = abs_no + mod * times;
+    ::uint64_t bigger_round_abs_no = abs_no + mod * (times + 1);
+    ::uint64_t less_round_abs_no = abs_no + (mod * (times - 1));
+
+    ::uint64_t distance_same_round_abs_no = abs(static_cast<long long>(same_round_abs_no - checkpoint));
+    ::uint64_t distance_bigger_round_abs_no = abs(static_cast<long long>(bigger_round_abs_no - checkpoint));
+    ::uint64_t distance_less_round_abs_no = abs(static_cast<long long>(less_round_abs_no - checkpoint));
+
+    if (times >= 1) {
+        if (distance_same_round_abs_no < distance_bigger_round_abs_no) {
+            if (distance_same_round_abs_no < distance_less_round_abs_no) {
+                return same_round_abs_no;
+            } else {
+                return less_round_abs_no;
+            }
+        } else {
+            return bigger_round_abs_no;
+        }
+    } else {
+        if (distance_same_round_abs_no < distance_bigger_round_abs_no) {
+            return same_round_abs_no;
+        } else {
+            return bigger_round_abs_no;
+        }
+    }
 }
