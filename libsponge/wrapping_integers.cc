@@ -1,6 +1,5 @@
 #include "wrapping_integers.hh"
 
-#include <iostream>
 #include <math.h>
 
 // Dummy implementation of a 32-bit wrapping integer
