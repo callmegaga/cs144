@@ -24,7 +24,6 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
     DUMMY_CODE(data, index, eof);
     size_t _index = index;
     string no_overlap_data = data;
-    size_t left_capacity = _capacity - _output.buffer_size() - _buff.size();
     size_t unacceptable_index = _next_index + _capacity - _output.buffer_size();
 
     if (eof) {
@@ -38,10 +37,6 @@ void StreamReassembler::push_substring(const string &data, const size_t index, c
         } else {
             return;
         }
-    }
-
-    if (no_overlap_data.size() > left_capacity) {
-        no_overlap_data = no_overlap_data.substr(0, left_capacity);
     }
 
     size_t _buff_index = _index;
