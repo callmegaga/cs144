@@ -5,9 +5,10 @@
 #include "tcp_over_ip.hh"
 #include "tun.hh"
 
+#include <list>
+#include <map>
 #include <optional>
 #include <queue>
-#include <vector>
 
 //! \brief A "network interface" that connects IP (the internet layer, or network layer)
 //! with Ethernet (the network access layer, or link layer).
@@ -32,11 +33,23 @@
 //! and learns or replies as necessary.
 class NetworkInterface {
   private:
-    class ARPRecord {
-      public:
-        EthernetAddress eth_address;
-        size_t time;
+    //! ARP 条目
+    struct ARP_Entry {
+        EthernetAddress eth_addr;
+        size_t ttl;
     };
+    //! ARP 表
+    std::map<uint32_t, ARP_Entry> _arp_table{};
+    // 默认 ARP 条目过期时间 30s
+    const size_t _arp_entry_default_ttl = 30 * 1000;
+
+    //! 正在查询的 ARP 报文。如果发送了 ARP 请求后，在过期时间内没有返回响应，则丢弃等待的 IP 报文
+    std::map<uint32_t, size_t> _waiting_arp_response_ip_addr{};
+    // 默认 ARP 请求过期时间 5s
+    const size_t _arp_response_default_ttl = 5 * 1000;
+
+    //! 等待 ARP 报文返回的待处理 IP 报文
+    std::list<std::pair<Address, InternetDatagram>> _waiting_arp_internet_datagrams{};
 
     //! Ethernet (known as hardware, network-access-layer, or link-layer) address of the interface
     EthernetAddress _ethernet_address;
@@ -46,11 +59,6 @@ class NetworkInterface {
 
     //! outbound queue of Ethernet frames that the NetworkInterface wants sent
     std::queue<EthernetFrame> _frames_out{};
-
-    std::unordered_map<uint32_t, ARPRecord> _map{};
-
-    std::unordered_map<uint32_t, std::vector<InternetDatagram>> _wait_for_ip_packages{};
-    std::unordered_map<uint32_t, size_t> _wait_time_for_ip_packages{};
 
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
