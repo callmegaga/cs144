@@ -50,6 +50,7 @@ class NetworkInterface {
     std::unordered_map<uint32_t, ARPRecord> _map{};
 
     std::unordered_map<uint32_t, std::vector<InternetDatagram>> _wait_for_ip_packages{};
+    std::unordered_map<uint32_t, size_t> _wait_time_for_ip_packages{};
 
   public:
     //! \brief Construct a network interface with given Ethernet (network-access-layer) and IP (internet-layer) addresses
