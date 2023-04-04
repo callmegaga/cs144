@@ -16,7 +16,7 @@ using namespace std;
 // You will need to add private members to the class declaration in `router.hh`
 
 template <typename... Targs>
-void DUMMY_CODE(Targs &&... /* unused */) {}
+void DUMMY_CODE(Targs &&.../* unused */) {}
 
 //! \param[in] route_prefix The "up-to-32-bit" IPv4 address prefix to match the datagram's destination address against
 //! \param[in] prefix_length For this route to be applicable, how many high-order (most-significant) bits of the route_prefix will need to match the corresponding bits of the datagram's destination address?
@@ -31,12 +31,31 @@ void Router::add_route(const uint32_t route_prefix,
 
     DUMMY_CODE(route_prefix, prefix_length, next_hop, interface_num);
     // Your code here.
+    _router_table.push_back({route_prefix, prefix_length, next_hop, interface_num});
 }
 
 //! \param[in] dgram The datagram to be routed
 void Router::route_one_datagram(InternetDatagram &dgram) {
     DUMMY_CODE(dgram);
     // Your code here.
+    auto match = _router_table.cend();
+    const uint32_t dst_ip_addr = dgram.header().dst;
+    for (auto iter = _router_table.cbegin(); iter != _router_table.cend(); iter++) {
+        if (iter->prefix_length == 0 || (dst_ip_addr ^ iter->route_prefix) >> (32 - iter->prefix_length) == 0) {
+            if (match == _router_table.cend() || match->prefix_length < iter->prefix_length) {
+                match = iter;
+            }
+        }
+    }
+
+    if (match != _router_table.cend() && dgram.header().ttl-- > 1) {
+        const optional<Address> next_hop = match->next_hop;
+        AsyncNetworkInterface &interface = _interfaces[match->interface_num];
+        if (next_hop.has_value())
+            interface.send_datagram(dgram, next_hop.value());
+        else
+            interface.send_datagram(dgram, Address::from_ipv4_numeric(dst_ip_addr));
+    }
 }
 
 void Router::route() {
